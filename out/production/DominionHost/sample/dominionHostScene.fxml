@@ -9,7 +9,7 @@
 
 <Pane prefHeight="276.0" prefWidth="284.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.Controller">
    <children>
-      <TextArea layoutX="21.0" layoutY="116.0" prefHeight="99.0" prefWidth="244.0" />
+      <TextArea fx:id="gameLogDisplay" layoutX="21.0" layoutY="116.0" prefHeight="99.0" prefWidth="244.0" />
       <Label layoutX="21.0" layoutY="34.0" text="IP of Host:" />
       <Label layoutX="36.0" layoutY="82.0" text="Port:" />
       <Button layoutX="219.0" layoutY="30.0" mnemonicParsing="false" onAction="#hostIPCopyToClipboard" prefHeight="25.0" prefWidth="47.0" text="Copy " />
