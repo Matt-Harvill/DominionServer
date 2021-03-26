@@ -6,26 +6,21 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.input.MouseEvent;
 
+import java.io.IOException;
+
 public class GameInfoController {
 
-    @FXML
-    private ComboBox<Integer> comboBox;
     @FXML private ChoiceBox<Integer> choiceBox;
+    private int maxNumPlayers;
 
     public void initialize() {
-        choiceBox.getItems().add(2);
-        choiceBox.getItems().add(3);
-        choiceBox.getItems().add(4);
-        choiceBox.getItems().add(5);
-        choiceBox.getItems().add(6);
+        for(int i=2;i<=6;i++) {
+            choiceBox.getItems().add(i);
+        }
     }
 
-    public void comboBoxAction(ActionEvent actionEvent) {
-        System.out.println("comboBox pressed");
-    }
-
-    public void mouseClicked(MouseEvent mouseEvent) {
-        System.out.println("height " + choiceBox.getHeight() + ", width "+ choiceBox.getWidth());
-
+    public void submitNumPlayers(ActionEvent actionEvent) throws IOException {
+        maxNumPlayers = choiceBox.getValue();
+        Main.startServer(maxNumPlayers);
     }
 }
