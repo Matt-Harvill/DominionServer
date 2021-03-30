@@ -106,14 +106,6 @@ class DominionServer {
             while (!Main.getServerController().getGameStart() && numClients<maxNumPlayers);
             System.out.println("No longer accepting connections");
 
-            int firstPlayerTurn = (int) (Math.random()*maxNumPlayers);
-            if(serverSideConnections.get(firstPlayerTurn).getName()!=null) {
-                serverSideConnections.get(firstPlayerTurn).broadcast("startTurn " + serverSideConnections.get(firstPlayerTurn).getName());
-            } else {
-                serverSideConnections.get(0).broadcast("startTurn " + serverSideConnections.get(0));
-                System.out.println("player0 selected");
-            }
-
         } catch (IOException ex) {
             System.out.println("IOException from acceptConnections()");
         }
@@ -128,6 +120,7 @@ class DominionServer {
     public int getNumClients() {
         return numClients;
     }
+    public int getMaxNumPlayers() {return maxNumPlayers;}
     public int getPortNumber() {
         return portNumber;
     }
@@ -146,10 +139,13 @@ class ServerSideConnection implements Runnable {
     private DataInputStream dataIn;
     private SocketAddress clientIP;
     private String name;
+    private int points;
+    private String playerInfoString;
     
     public ServerSideConnection(Socket s) {
         socket = s;
         name = "AnonymousPlayer" + Main.getServer().getNumClients();
+        points = 0;
         clientIP = s.getRemoteSocketAddress();
         try {
             dataIn = new DataInputStream(socket.getInputStream());
@@ -165,22 +161,52 @@ class ServerSideConnection implements Runnable {
         while(true) {
             try {
                 String receivedMessage = receive();
-                String sendCommand = receivedMessage;
+                String sendMessage = receivedMessage;
                 Scanner scanner = new Scanner(receivedMessage);
-                String receivedCommand = scanner.next();
-                if(receivedCommand.equals("setName")) {
+                String command = scanner.next();
+
+                if(command.equals("join")) {
                     name = scanner.next();
-                    sendCommand = "connected " + name;
-                } else if(receivedCommand.equals("endTurn")) {
+                    points = scanner.nextInt();
+                    sendMessage = "inGame ";
+
+                    DominionServer server = Main.getServer();
+                    List<ServerSideConnection> serverSideConnections = server.getServerSideConnections();
+
+                    for(ServerSideConnection ssc: serverSideConnections) {
+                        if(ssc.equals(this)) continue;
+                        sendMessage+=ssc.getPlayerInfoString();
+                        individualSend(sendMessage);
+                        sendMessage = "inGame ";
+                    }
+                    sendMessage = "connected " + getPlayerInfoString();
+
+                    if(server.getNumClients()==server.getMaxNumPlayers()) {
+                        int firstPlayerTurn = (int) (Math.random()*server.getMaxNumPlayers());
+                        if(serverSideConnections.get(firstPlayerTurn).getName()!=null) {
+                            serverSideConnections.get(firstPlayerTurn).broadcastAll(
+                                    "startTurn " + serverSideConnections.get(firstPlayerTurn).getPlayerInfoString());
+                        } else {
+                            serverSideConnections.get(0).broadcastAll(
+                                    "startTurn " + serverSideConnections.get(0).getPlayerInfoString());
+                            System.out.println("player0 selected");
+                        }
+                    }
+                }
+
+                else if(command.equals("endTurn")) {
                     List<ServerSideConnection> connections = Main.getServer().getServerSideConnections();
                     int indexOfThis = connections.indexOf(this);
-                    sendCommand = "startTurn ";
+                    sendMessage = "startTurn ";
                     if(indexOfThis==connections.size()-1) {
-                        sendCommand += connections.get(0).getName();
+                        sendMessage+=connections.get(0).getPlayerInfoString();
                     }
-                    else sendCommand += connections.get(indexOfThis+1).getName();
+                    else sendMessage+=connections.get(indexOfThis + 1).getPlayerInfoString();
+                    individualSend(sendMessage);
                 }
-                broadcast(sendCommand);
+
+                broadcast(sendMessage);
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -194,10 +220,31 @@ class ServerSideConnection implements Runnable {
         for(ServerSideConnection ssc: Main.getServer().getServerSideConnections()) {
             if(ssc.equals(this)) continue;
             ssc.getDataOut().writeUTF(s);
+            ssc.getDataOut().flush();
         }
     }
+    public void broadcastAll(String s) throws IOException {
+        for(ServerSideConnection ssc: Main.getServer().getServerSideConnections()) {
+            ssc.getDataOut().writeUTF(s);
+            ssc.getDataOut().flush();
+        }
+    }
+    public void individualSend(String s) throws IOException {
+        dataOut.writeUTF(s);
+        dataOut.flush();
+    }
+
     public DataOutputStream getDataOut() {
         return dataOut;
     }
+
+    public String getPlayerInfoString() {
+        playerInfoString = name + " " + points + " ";
+        return playerInfoString;
+    }
+
     public String getName() {return name;}
+    public int getPoints() {
+        return points;
+    }
 }
